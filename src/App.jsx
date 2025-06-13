@@ -34,6 +34,13 @@ function App() {
         openOnClick: false,
         HTMLAttributes: {
           class: 'link',
+          // Add click handler that checks for cmd/ctrl
+          onclick: function(event) {
+            if (event.metaKey || event.ctrlKey) {
+              event.preventDefault();
+              window.open(this.href, '_blank');
+            }
+          },
         },
       }),
       Underline,
