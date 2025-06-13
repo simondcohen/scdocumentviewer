@@ -218,14 +218,19 @@ function App() {
       <main className="flex-1 overflow-hidden flex">
         <div
           ref={previewRef}
-          className={`p-4 overflow-auto ${showSource ? 'w-1/2 border-r' : 'w-full'} flex justify-center`}
+          className={`overflow-auto ${showSource ? 'w-1/2 border-r' : 'w-full'} flex justify-center`}
         >
-          {editor && (
-            <EditorContent editor={editor} className="prose prose-slate min-h-full w-full max-w-3xl" />
-          )}
+          <div className={`w-full ${showSource ? 'p-4' : 'px-8 py-6'} max-w-4xl mx-auto`}>
+            {editor && (
+              <EditorContent 
+                editor={editor} 
+                className="prose prose-slate prose-lg min-h-full w-full max-w-none focus:outline-none" 
+              />
+            )}
+          </div>
         </div>
         {showSource && (
-          <pre className="w-1/2 p-4 overflow-auto bg-gray-100">
+          <pre className="w-1/2 p-4 overflow-auto bg-gray-100 font-mono text-sm">
             {content}
           </pre>
         )}
