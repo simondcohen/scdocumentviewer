@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { EditorContent, useEditor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import Underline from '@tiptap/extension-underline'
+import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown } from 'tiptap-markdown'
 
 function App() {
   const [handle, setHandle] = useState(null)
@@ -9,6 +13,22 @@ function App() {
   const [lastModified, setLastModified] = useState(0)
   const [splitView, setSplitView] = useState(true)
   const previewRef = useRef(null)
+  const [savedVisible, setSavedVisible] = useState(false)
+
+  const editor = useEditor({
+    editable: true,
+    extensions: [
+      StarterKit,
+      Link,
+      Underline,
+      Placeholder.configure({ placeholder: 'Start writing\u2026' }),
+      Markdown,
+    ],
+    content: '',
+    onUpdate({ editor }) {
+      setContent(editor.storage.markdown.getMarkdown())
+    },
+  })
 
   const readFile = useCallback(async () => {
     if (!handle) return
@@ -16,29 +36,28 @@ function App() {
       const file = await handle.getFile()
       if (file.lastModified !== lastModified) {
         const text = await file.text()
-        const container = previewRef.current
-        const ratio = container ? container.scrollTop / container.scrollHeight : 0
-        setContent(text)
-        setLastModified(file.lastModified)
-        requestAnimationFrame(() => {
-          if (container) {
-            container.scrollTop = ratio * container.scrollHeight
-          }
-        })
+        if (window.confirm('File changed externally. Reload?')) {
+          const pos = editor?.state.selection.from
+          editor?.commands.setContent(text)
+          setContent(text)
+          setLastModified(file.lastModified)
+          requestAnimationFrame(() => {
+            if (pos) editor?.commands.setTextSelection(pos)
+          })
+        } else {
+          setLastModified(file.lastModified)
+        }
       }
     } catch (err) {
       console.error(err)
     }
-  }, [handle, lastModified])
+  }, [handle, lastModified, editor])
 
   useEffect(() => {
     const id = setInterval(readFile, 1500)
     return () => clearInterval(id)
   }, [readFile])
 
-  useEffect(() => {
-    window.hljs?.highlightAll()
-  }, [content, splitView])
 
   const openFile = async () => {
     try {
@@ -51,16 +70,52 @@ function App() {
         ],
         multiple: false,
       })
+      openWithHandle(h)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const openWithHandle = useCallback(
+    async (h) => {
+      if (!h) return
       if (await h.requestPermission({ mode: 'read' }) !== 'granted') return
       setHandle(h)
       const file = await h.getFile()
       setFileName(file.name)
       setLastModified(file.lastModified)
-      setContent(await file.text())
-    } catch (err) {
-      console.error(err)
+      const text = await file.text()
+      setContent(text)
+      editor?.commands.setContent(text)
+    },
+    [editor]
+  )
+
+  useEffect(() => {
+    const listener = (e) => {
+      openWithHandle(e.detail)
     }
-  }
+    window.addEventListener('file-open', listener)
+    return () => window.removeEventListener('file-open', listener)
+  }, [openWithHandle])
+
+  useEffect(() => {
+    if (!editor || !handle) return
+    const id = setTimeout(async () => {
+      try {
+        const writable = await handle.createWritable()
+        await writable.write(editor.storage.markdown.getMarkdown())
+        await writable.close()
+        const file = await handle.getFile()
+        setLastModified(file.lastModified)
+        setSavedVisible(true)
+        setTimeout(() => setSavedVisible(false), 1000)
+      } catch (err) {
+        console.error(err)
+      }
+    }, 2000)
+    return () => clearTimeout(id)
+  }, [content, handle, editor])
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
@@ -73,6 +128,9 @@ function App() {
             Open File
           </button>
           {fileName && <span className="font-medium">{fileName}</span>}
+          {savedVisible && (
+            <span className="text-sm text-green-600 animate-pulse">Saved</span>
+          )}
         </div>
         <div>
           <button
@@ -83,6 +141,80 @@ function App() {
           </button>
         </div>
       </header>
+      <div className="border-b bg-white p-2 flex gap-1 text-sm">
+        <button
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={`px-2 rounded ${editor?.isActive('bold') ? 'bg-gray-200' : ''}`}
+        >
+          B
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={`px-2 rounded ${editor?.isActive('italic') ? 'bg-gray-200' : ''}`}
+        >
+          I
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={`px-2 rounded ${editor?.isActive('strike') ? 'bg-gray-200' : ''}`}
+        >
+          S
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`px-2 rounded ${editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''}`}
+        >
+          H1
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`px-2 rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''}`}
+        >
+          H2
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={`px-2 rounded ${editor?.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''}`}
+        >
+          H3
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`px-2 rounded ${editor?.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+        >
+          •
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`px-2 rounded ${editor?.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+        >
+          1.
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={`px-2 rounded ${editor?.isActive('codeBlock') ? 'bg-gray-200' : ''}`}
+        >
+          {'</>'}
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={`px-2 rounded ${editor?.isActive('code') ? 'bg-gray-200' : ''}`}
+        >
+          {'<>'}
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={`px-2 rounded ${editor?.isActive('blockquote') ? 'bg-gray-200' : ''}`}
+        >
+          "
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setLink({ href: prompt('URL') || '' }).run()}
+          className="px-2 rounded"
+        >
+          Link
+        </button>
+      </div>
       <main className="flex-1 overflow-hidden flex">
         {splitView && (
           <pre
@@ -94,24 +226,9 @@ function App() {
         )}
         <div
           ref={!splitView ? previewRef : null}
-          className={`${
-            splitView ? 'w-1/2' : 'w-full'
-          } p-4 overflow-auto prose prose-slate max-w-none`}
+          className={`${splitView ? 'w-1/2' : 'w-full'} p-4 overflow-auto prose prose-slate max-w-none`}
         >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              code({ children, className }) {
-                return (
-                  <pre>
-                    <code className={className}>{children}</code>
-                  </pre>
-                )
-              },
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+          {editor && <EditorContent editor={editor} className="min-h-full" />}
         </div>
       </main>
     </div>
