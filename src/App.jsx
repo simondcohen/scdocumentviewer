@@ -99,15 +99,11 @@ function App() {
     return () => window.removeEventListener('file-open', listener)
   }, [openWithHandle])
 
-  // Handle files when app is launched by clicking a .md file
+  // Check for pending file handle when component mounts
   useEffect(() => {
-    if ('launchQueue' in window) {
-      window.launchQueue.setConsumer(async (launchParams) => {
-        if (!launchParams.files.length) return;
-        
-        const fileHandle = launchParams.files[0];
-        openWithHandle(fileHandle);
-      });
+    if (window.pendingFileHandle) {
+      openWithHandle(window.pendingFileHandle);
+      window.pendingFileHandle = null; // Clear after processing
     }
   }, [openWithHandle]);
 

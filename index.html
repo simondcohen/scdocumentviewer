@@ -20,10 +20,19 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
       }
+      
+      // Store the file handle globally until React is ready
+      window.pendingFileHandle = null;
+
       if ('launchQueue' in window && 'files' in LaunchParams.prototype) {
         window.launchQueue.setConsumer(async (params) => {
           if (params.files.length) {
             const fileHandle = params.files[0];
+            
+            // Store the handle
+            window.pendingFileHandle = fileHandle;
+            
+            // Also dispatch event in case React is already mounted
             window.dispatchEvent(new CustomEvent('file-open', { detail: fileHandle }));
           }
         });
