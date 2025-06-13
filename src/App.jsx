@@ -99,6 +99,18 @@ function App() {
     return () => window.removeEventListener('file-open', listener)
   }, [openWithHandle])
 
+  // Handle files when app is launched by clicking a .md file
+  useEffect(() => {
+    if ('launchQueue' in window) {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (!launchParams.files.length) return;
+        
+        const fileHandle = launchParams.files[0];
+        openWithHandle(fileHandle);
+      });
+    }
+  }, [openWithHandle]);
+
   useEffect(() => {
     if (!editor || !handle) return
     const id = setTimeout(async () => {

@@ -2,6 +2,11 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open('scviewer-v1').then((cache) => cache.addAll(['/', '/index.html']))
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (e) => {
