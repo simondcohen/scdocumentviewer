@@ -105,6 +105,16 @@ button:focus-visible {
 .prose ul, .prose ol {
   margin-top: 1rem;
   margin-bottom: 1rem;
+  padding-left: 1.25rem;
+  list-style-position: inside;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
 }
 
 .prose blockquote {
