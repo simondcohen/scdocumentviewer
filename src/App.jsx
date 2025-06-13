@@ -18,11 +18,38 @@ function App() {
   const editor = useEditor({
     editable: true,
     extensions: [
-      StarterKit,
-      Link,
+      StarterKit.configure({
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        listItem: {
+          HTMLAttributes: {
+            class: 'ml-4',
+          },
+        },
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-blue-600 underline',
+        },
+      }),
       Underline,
-      Placeholder.configure({ placeholder: 'Start writing\u2026' }),
-      Markdown,
+      Placeholder.configure({ 
+        placeholder: 'Start writing…' 
+      }),
+      Markdown.configure({
+        html: false,
+        tightLists: true,
+        bulletListMarker: '-',
+        linkify: true,
+        breaks: true,
+      }),
     ],
     content: '',
     onUpdate({ editor }) {
@@ -232,7 +259,7 @@ function App() {
             {editor && (
               <EditorContent 
                 editor={editor} 
-                className="prose prose-slate prose-lg min-h-full w-full max-w-none focus:outline-none" 
+                className="prose prose-slate prose-lg min-h-full w-full focus:outline-none prose-ul:list-disc prose-ol:list-decimal prose-li:ml-0 [&_.ProseMirror]:min-h-[calc(100vh-8rem)]" 
               />
             )}
           </div>
