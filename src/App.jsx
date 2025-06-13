@@ -14,6 +14,8 @@ function App() {
   const [showSource, setShowSource] = useState(false)
   const previewRef = useRef(null)
   const [savedVisible, setSavedVisible] = useState(false)
+  const [reloadingVisible, setReloadingVisible] = useState(false)
+  const debounceTimeoutRef = useRef(null)
 
   const editor = useEditor({
     editable: true,
@@ -57,18 +59,35 @@ function App() {
     try {
       const file = await handle.getFile()
       if (file.lastModified !== lastModified) {
-        const text = await file.text()
-        if (window.confirm('File changed externally. Reload?')) {
-          const pos = editor?.state.selection.from
-          editor?.commands.setContent(text)
-          setContent(text)
-          setLastModified(file.lastModified)
-          requestAnimationFrame(() => {
-            if (pos) editor?.commands.setTextSelection(pos)
-          })
-        } else {
-          setLastModified(file.lastModified)
+        // Debounce rapid file changes
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current)
         }
+        
+        debounceTimeoutRef.current = setTimeout(async () => {
+          try {
+            const text = await file.text()
+            const pos = editor?.state.selection.from
+            
+            // Show reload indicator
+            setReloadingVisible(true)
+            
+            // Reload the content
+            editor?.commands.setContent(text)
+            setContent(text)
+            setLastModified(file.lastModified)
+            
+            // Restore cursor position
+            requestAnimationFrame(() => {
+              if (pos) editor?.commands.setTextSelection(pos)
+              // Hide reload indicator after a brief delay
+              setTimeout(() => setReloadingVisible(false), 500)
+            })
+          } catch (err) {
+            console.error('Error during auto-reload:', err)
+            setReloadingVisible(false)
+          }
+        }, 200)
       }
     } catch (err) {
       console.error(err)
@@ -79,6 +98,15 @@ function App() {
     const id = setInterval(readFile, 1500)
     return () => clearInterval(id)
   }, [readFile])
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+    }
+  }, [])
 
 
   const openFile = async () => {
@@ -191,6 +219,7 @@ function App() {
           </button>
           {fileName && <span className="file-name">{fileName}</span>}
           {savedVisible && <span className="saved-notice">Saved</span>}
+          {reloadingVisible && <span className="reload-notice">Reloading...</span>}
         </div>
         <div>
           <button onClick={() => setShowSource((v) => !v)} className="btn">

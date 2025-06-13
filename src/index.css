@@ -52,6 +52,12 @@ body {
   animation: pulse 1s ease-in-out infinite;
 }
 
+.reload-notice {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
