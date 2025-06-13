@@ -153,119 +153,111 @@ function App() {
   }, [content, handle, editor])
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
-      <header className="p-4 shadow flex justify-between items-center bg-white">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={openFile}
-            className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
-          >
+    <div className="app">
+      <header className="app-header">
+        <div className="file-info">
+          <button onClick={openFile} className="btn btn-primary">
             Open File
           </button>
-          {fileName && <span className="font-medium">{fileName}</span>}
-          {savedVisible && (
-            <span className="text-xs text-gray-500 animate-pulse">Saved</span>
-          )}
+          {fileName && <span className="file-name">{fileName}</span>}
+          {savedVisible && <span className="saved-notice">Saved</span>}
         </div>
         <div>
-          <button
-            onClick={() => setShowSource((v) => !v)}
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
-          >
+          <button onClick={() => setShowSource((v) => !v)} className="btn">
             {showSource ? 'Hide Source' : 'Show Source'}
           </button>
         </div>
       </header>
-      <div className="border-b bg-white p-2 flex gap-1 text-sm sticky top-0 z-10">
+      <div className="toolbar">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`px-2 rounded ${editor?.isActive('bold') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('bold') ? 'active' : ''}`}
         >
           B
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`px-2 rounded ${editor?.isActive('italic') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('italic') ? 'active' : ''}`}
         >
           I
         </button>
         <button
           onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={`px-2 rounded ${editor?.isActive('strike') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('strike') ? 'active' : ''}`}
         >
           S
         </button>
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={`px-2 rounded ${editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('heading', { level: 1 }) ? 'active' : ''}`}
         >
           H1
         </button>
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`px-2 rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('heading', { level: 2 }) ? 'active' : ''}`}
         >
           H2
         </button>
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={`px-2 rounded ${editor?.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('heading', { level: 3 }) ? 'active' : ''}`}
         >
           H3
         </button>
         <button
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-2 rounded ${editor?.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('bulletList') ? 'active' : ''}`}
         >
           •
         </button>
         <button
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-2 rounded ${editor?.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('orderedList') ? 'active' : ''}`}
         >
           1.
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={`px-2 rounded ${editor?.isActive('codeBlock') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('codeBlock') ? 'active' : ''}`}
         >
           {'</>'}
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={`px-2 rounded ${editor?.isActive('code') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('code') ? 'active' : ''}`}
         >
           {'<>'}
         </button>
         <button
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={`px-2 rounded ${editor?.isActive('blockquote') ? 'bg-gray-200' : ''}`}
+          className={`toolbar-button ${editor?.isActive('blockquote') ? 'active' : ''}`}
         >
           "
         </button>
         <button
           onClick={() => editor.chain().focus().setLink({ href: prompt('URL') || '' }).run()}
-          className="px-2 rounded"
+          className="toolbar-button"
         >
           Link
         </button>
       </div>
-      <main className="flex-1 overflow-hidden flex">
+      <main className="content">
         <div
           ref={previewRef}
-          className={`overflow-auto ${showSource ? 'w-1/2 border-r' : 'w-full'} flex justify-center`}
+          className={`preview ${showSource ? 'split' : ''}`}
         >
-          <div className={`w-full ${showSource ? 'p-4' : 'px-8 py-6'} max-w-4xl mx-auto`}>
+          <div className={`editor-wrapper ${showSource ? 'compact' : ''}`}>
             {editor && (
-              <EditorContent 
-                editor={editor} 
-                className="prose prose-slate prose-lg min-h-full w-full focus:outline-none prose-ul:list-disc prose-ol:list-decimal prose-li:ml-0 [&_.ProseMirror]:min-h-[calc(100vh-8rem)]" 
+              <EditorContent
+                editor={editor}
+                className="doc-editor prose"
               />
             )}
           </div>
         </div>
         {showSource && (
-          <pre className="w-1/2 p-4 overflow-auto bg-gray-100 font-mono text-sm">
+          <pre className="editor-source">
             {content}
           </pre>
         )}
