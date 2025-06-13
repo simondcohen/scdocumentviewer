@@ -27,21 +27,16 @@ function App() {
           keepMarks: true,
           keepAttributes: false,
         },
-        listItem: {
-          HTMLAttributes: {
-            class: 'ml-4',
-          },
-        },
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-600 underline',
+          class: 'link',
         },
       }),
       Underline,
       Placeholder.configure({ 
-        placeholder: 'Start writing…' 
+        placeholder: 'Start writing or paste markdown...' 
       }),
       Markdown.configure({
         html: false,
@@ -236,7 +231,14 @@ function App() {
           "
         </button>
         <button
-          onClick={() => editor.chain().focus().setLink({ href: prompt('URL') || '' }).run()}
+          onClick={() => {
+            const url = window.prompt('Enter URL:');
+            if (url) {
+              editor.chain().focus().setLink({ href: url }).run();
+            } else if (url === '') {
+              editor.chain().focus().unsetLink().run();
+            }
+          }}
           className="toolbar-button"
         >
           Link
