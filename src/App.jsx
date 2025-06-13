@@ -94,21 +94,56 @@ function App() {
       })
       openWithHandle(h)
     } catch (err) {
-      console.error(err)
+      // Don't show error for user cancellation (AbortError)
+      if (err.name !== 'AbortError') {
+        console.error('Error opening file picker:', err)
+        alert(
+          'Failed to open file picker.\n\n' +
+          'This could be due to browser compatibility issues. ' +
+          'Please make sure you\'re using a modern browser that supports the File System Access API.'
+        )
+      }
     }
   }
 
   const openWithHandle = useCallback(
     async (h) => {
       if (!h) return
-      if (await h.requestPermission({ mode: 'read' }) !== 'granted') return
-      setHandle(h)
-      const file = await h.getFile()
-      setFileName(file.name)
-      setLastModified(file.lastModified)
-      const text = await file.text()
-      setContent(text)
-      editor?.commands.setContent(text)
+      
+      try {
+        const permission = await h.requestPermission({ mode: 'read' })
+        if (permission !== 'granted') {
+          alert(
+            'File access permission denied.\n\n' +
+            'This app needs permission to read your markdown files to display and edit them. ' +
+            'Your files remain completely private and secure on your device - they are never uploaded or shared.\n\n' +
+            'To grant permission:\n' +
+            '1. Click "Open File" again\n' +
+            '2. Select your file\n' +
+            '3. Click "Allow" when prompted for permission\n\n' +
+            'You can revoke this permission at any time through your browser settings.'
+          )
+          return
+        }
+        
+        setHandle(h)
+        const file = await h.getFile()
+        setFileName(file.name)
+        setLastModified(file.lastModified)
+        const text = await file.text()
+        setContent(text)
+        editor?.commands.setContent(text)
+      } catch (err) {
+        console.error('Error opening file:', err)
+        alert(
+          'Failed to open file.\n\n' +
+          'This could be due to:\n' +
+          '• File permission issues\n' +
+          '• File system access restrictions\n' +
+          '• Browser compatibility issues\n\n' +
+          'Please try again or use a different file.'
+        )
+      }
     },
     [editor]
   )
