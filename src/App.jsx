@@ -34,13 +34,6 @@ function App() {
         openOnClick: false,
         HTMLAttributes: {
           class: 'link',
-          // Add click handler that checks for cmd/ctrl
-          onclick: function(event) {
-            if (event.metaKey || event.ctrlKey) {
-              event.preventDefault();
-              window.open(this.href, '_blank');
-            }
-          },
         },
       }),
       Underline,
@@ -115,6 +108,37 @@ function App() {
     }
   }, [])
 
+  // Handle cmd/ctrl+click on links
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleLinkClick = (event) => {
+      // Check if the clicked element is a link
+      const link = event.target.closest('a.link');
+      if (!link) return;
+
+      // Check if cmd (Mac) or ctrl (Windows/Linux) is held
+      if (event.metaKey || event.ctrlKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        const href = link.getAttribute('href');
+        if (href) {
+          window.open(href, '_blank');
+        }
+      }
+    };
+
+    // Get the editor's DOM element
+    const editorElement = editor.view.dom;
+    
+    // Add the click listener
+    editorElement.addEventListener('click', handleLinkClick);
+
+    // Cleanup
+    return () => {
+      editorElement.removeEventListener('click', handleLinkClick);
+    };
+  }, [editor]);
 
   const openFile = async () => {
     try {
