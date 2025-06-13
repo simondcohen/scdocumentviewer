@@ -11,7 +11,7 @@ function App() {
   const [content, setContent] = useState('')
   const [fileName, setFileName] = useState('')
   const [lastModified, setLastModified] = useState(0)
-  const [splitView, setSplitView] = useState(true)
+  const [showSource, setShowSource] = useState(false)
   const previewRef = useRef(null)
   const [savedVisible, setSavedVisible] = useState(false)
 
@@ -129,19 +129,19 @@ function App() {
           </button>
           {fileName && <span className="font-medium">{fileName}</span>}
           {savedVisible && (
-            <span className="text-sm text-green-600 animate-pulse">Saved</span>
+            <span className="text-xs text-gray-500 animate-pulse">Saved</span>
           )}
         </div>
         <div>
           <button
-            onClick={() => setSplitView((v) => !v)}
+            onClick={() => setShowSource((v) => !v)}
             className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
           >
-            {splitView ? 'Preview Only' : 'Split View'}
+            {showSource ? 'Hide Source' : 'Show Source'}
           </button>
         </div>
       </header>
-      <div className="border-b bg-white p-2 flex gap-1 text-sm">
+      <div className="border-b bg-white p-2 flex gap-1 text-sm sticky top-0 z-10">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`px-2 rounded ${editor?.isActive('bold') ? 'bg-gray-200' : ''}`}
@@ -216,20 +216,19 @@ function App() {
         </button>
       </div>
       <main className="flex-1 overflow-hidden flex">
-        {splitView && (
-          <pre
-            className="w-1/2 p-4 overflow-auto border-r bg-gray-100"
-            ref={previewRef}
-          >
+        <div
+          ref={previewRef}
+          className={`p-4 overflow-auto ${showSource ? 'w-1/2 border-r' : 'w-full'} flex justify-center`}
+        >
+          {editor && (
+            <EditorContent editor={editor} className="prose prose-slate min-h-full w-full max-w-3xl" />
+          )}
+        </div>
+        {showSource && (
+          <pre className="w-1/2 p-4 overflow-auto bg-gray-100">
             {content}
           </pre>
         )}
-        <div
-          ref={!splitView ? previewRef : null}
-          className={`${splitView ? 'w-1/2' : 'w-full'} p-4 overflow-auto prose prose-slate max-w-none`}
-        >
-          {editor && <EditorContent editor={editor} className="min-h-full" />}
-        </div>
       </main>
     </div>
   )
