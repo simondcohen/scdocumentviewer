@@ -5,6 +5,7 @@ import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown'
+import DiffMatchPatch from 'diff-match-patch'
 
 function App() {
   const [handle, setHandle] = useState(null)
@@ -15,7 +16,10 @@ function App() {
   const previewRef = useRef(null)
   const [savedVisible, setSavedVisible] = useState(false)
   const [reloadingVisible, setReloadingVisible] = useState(false)
+  const [mergedVisible, setMergedVisible] = useState(false)
   const debounceTimeoutRef = useRef(null)
+  const [lastSavedContent, setLastSavedContent] = useState('')
+  const dmpRef = useRef(new DiffMatchPatch())
 
   const editor = useEditor({
     editable: true,
@@ -63,24 +67,34 @@ function App() {
         if (debounceTimeoutRef.current) {
           clearTimeout(debounceTimeoutRef.current)
         }
-        
+
         debounceTimeoutRef.current = setTimeout(async () => {
           try {
             const text = await file.text()
             const pos = editor?.state.selection.from
-            
-            // Show reload indicator
-            setReloadingVisible(true)
-            
-            // Reload the content
-            editor?.commands.setContent(text)
-            setContent(text)
+            const currentText = editor?.storage.markdown.getMarkdown() || ''
+
+            if (currentText !== lastSavedContent) {
+              // Merge external changes with local unsaved edits
+              const patch = dmpRef.current.patch_make(lastSavedContent, text)
+              const [merged] = dmpRef.current.patch_apply(patch, currentText)
+              editor?.commands.setContent(merged)
+              setContent(merged)
+              setMergedVisible(true)
+              setTimeout(() => setMergedVisible(false), 1000)
+            } else {
+              // Show reload indicator when no merge is needed
+              setReloadingVisible(true)
+              editor?.commands.setContent(text)
+              setContent(text)
+            }
+
             setLastModified(file.lastModified)
-            
+            setLastSavedContent(text)
+
             // Restore cursor position
             requestAnimationFrame(() => {
               if (pos) editor?.commands.setTextSelection(pos)
-              // Hide reload indicator after a brief delay
               setTimeout(() => setReloadingVisible(false), 500)
             })
           } catch (err) {
@@ -92,7 +106,7 @@ function App() {
     } catch (err) {
       console.error(err)
     }
-  }, [handle, lastModified, editor])
+  }, [handle, lastModified, editor, lastSavedContent])
 
   useEffect(() => {
     const id = setInterval(readFile, 1500)
@@ -191,6 +205,7 @@ function App() {
         setLastModified(file.lastModified)
         const text = await file.text()
         setContent(text)
+        setLastSavedContent(text)
         editor?.commands.setContent(text)
       } catch (err) {
         console.error('Error opening file:', err)
@@ -232,6 +247,7 @@ function App() {
         await writable.close()
         const file = await handle.getFile()
         setLastModified(file.lastModified)
+        setLastSavedContent(editor.storage.markdown.getMarkdown())
         setSavedVisible(true)
         setTimeout(() => setSavedVisible(false), 1000)
       } catch (err) {
@@ -251,6 +267,7 @@ function App() {
           {fileName && <span className="file-name">{fileName}</span>}
           {savedVisible && <span className="saved-notice">Saved</span>}
           {reloadingVisible && <span className="reload-notice">Reloading...</span>}
+          {mergedVisible && <span className="merge-notice">Merged</span>}
         </div>
         <div>
           <button onClick={() => setShowSource((v) => !v)} className="btn">
