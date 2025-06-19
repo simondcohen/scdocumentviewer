@@ -20,6 +20,12 @@ function App() {
   const debounceTimeoutRef = useRef(null)
   const [lastSavedContent, setLastSavedContent] = useState('')
   const dmpRef = useRef(new DiffMatchPatch())
+  
+  // New state for editable source view
+  const [isEditingSource, setIsEditingSource] = useState(false)
+  const [sourceContent, setSourceContent] = useState('')
+  const sourceDebounceRef = useRef(null)
+  const updateSourceRef = useRef(false) // Flag to prevent infinite loops
 
   const editor = useEditor({
     editable: true,
@@ -54,9 +60,52 @@ function App() {
     ],
     content: '',
     onUpdate({ editor }) {
-      setContent(editor.storage.markdown.getMarkdown())
+      const markdown = editor.storage.markdown.getMarkdown()
+      setContent(markdown)
+      
+      // Only update source content if the change didn't come from source view
+      if (!updateSourceRef.current && !isEditingSource) {
+        setSourceContent(markdown)
+      }
+      updateSourceRef.current = false
     },
   })
+
+  // Handle source view changes with debouncing
+  const handleSourceChange = useCallback((e) => {
+    const newContent = e.target.value
+    setSourceContent(newContent)
+    
+    // Clear existing timeout
+    if (sourceDebounceRef.current) {
+      clearTimeout(sourceDebounceRef.current)
+    }
+    
+    // Debounce source updates to TipTap
+    sourceDebounceRef.current = setTimeout(() => {
+      if (editor && newContent !== content) {
+        updateSourceRef.current = true // Prevent feedback loop
+        editor.commands.setContent(newContent)
+        setContent(newContent)
+      }
+    }, 400) // 400ms debounce for typing
+  }, [editor, content])
+
+  // Handle source textarea focus/blur
+  const handleSourceFocus = useCallback(() => {
+    setIsEditingSource(true)
+  }, [])
+
+  const handleSourceBlur = useCallback(() => {
+    setIsEditingSource(false)
+  }, [])
+
+  // Initialize source content when content changes from external sources
+  useEffect(() => {
+    if (!isEditingSource) {
+      setSourceContent(content)
+    }
+  }, [content, isEditingSource])
 
   const readFile = useCallback(async () => {
     if (!handle) return
@@ -80,6 +129,7 @@ function App() {
               const [merged] = dmpRef.current.patch_apply(patch, currentText)
               editor?.commands.setContent(merged)
               setContent(merged)
+              setSourceContent(merged)
               setMergedVisible(true)
               setTimeout(() => setMergedVisible(false), 1000)
             } else {
@@ -87,6 +137,7 @@ function App() {
               setReloadingVisible(true)
               editor?.commands.setContent(text)
               setContent(text)
+              setSourceContent(text)
             }
 
             setLastModified(file.lastModified)
@@ -113,11 +164,14 @@ function App() {
     return () => clearInterval(id)
   }, [readFile])
 
-  // Cleanup debounce timeout on unmount
+  // Cleanup debounce timeouts on unmount
   useEffect(() => {
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current)
+      }
+      if (sourceDebounceRef.current) {
+        clearTimeout(sourceDebounceRef.current)
       }
     }
   }, [])
@@ -205,6 +259,7 @@ function App() {
         setLastModified(file.lastModified)
         const text = await file.text()
         setContent(text)
+        setSourceContent(text)
         setLastSavedContent(text)
         editor?.commands.setContent(text)
       } catch (err) {
@@ -240,6 +295,10 @@ function App() {
 
   useEffect(() => {
     if (!editor || !handle) return
+    
+    // Don't auto-save while actively typing in source view
+    if (isEditingSource && sourceDebounceRef.current) return
+    
     const id = setTimeout(async () => {
       try {
         const writable = await handle.createWritable()
@@ -255,7 +314,7 @@ function App() {
       }
     }, 2000)
     return () => clearTimeout(id)
-  }, [content, handle, editor])
+  }, [content, handle, editor, isEditingSource])
 
   return (
     <div className="app">
@@ -371,9 +430,15 @@ function App() {
           </div>
         </div>
         {showSource && (
-          <pre className="editor-source">
-            {content}
-          </pre>
+          <textarea
+            className="editor-source"
+            value={sourceContent}
+            onChange={handleSourceChange}
+            onFocus={handleSourceFocus}
+            onBlur={handleSourceBlur}
+            placeholder="Enter markdown here..."
+            spellCheck={false}
+          />
         )}
       </main>
     </div>
