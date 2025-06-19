@@ -124,6 +124,24 @@ body {
   background: #e5e7eb;
 }
 
+/* Width toggle button styles */
+.toolbar-separator {
+  width: 1px;
+  height: 1.5rem;
+  background: #e5e7eb;
+  margin: 0 0.5rem;
+}
+
+.width-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.toolbar-button-text {
+  font-size: 0.75rem;
+}
+
 .content {
   flex: 1;
   display: flex;
@@ -148,10 +166,20 @@ body {
   max-width: 48rem;
   padding: 2rem;
   box-sizing: border-box;
+  transition: max-width 0.3s ease-in-out, padding 0.3s ease-in-out;
 }
 
 .editor-wrapper.compact {
   padding: 1rem;
+}
+
+.editor-wrapper.full-width {
+  max-width: none;
+  padding: 2rem 3rem;
+}
+
+.editor-wrapper.full-width.compact {
+  padding: 1rem 2rem;
 }
 
 .doc-editor {
@@ -317,6 +345,13 @@ body {
   overflow: visible;
   display: table;
   max-width: 100%;
+}
+
+/* Enhanced table styles for full-width mode */
+.editor-wrapper.full-width .ProseMirror table {
+  table-layout: auto;
+  width: 100%;
+  min-width: 100%;
 }
 
 .ProseMirror th, .ProseMirror td {

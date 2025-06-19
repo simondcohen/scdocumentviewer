@@ -11,6 +11,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import { Markdown } from 'tiptap-markdown'
 import DiffMatchPatch from 'diff-match-patch'
 import { Node, mergeAttributes } from '@tiptap/core'
+import { Expand, Shrink } from 'lucide-react'
 // The tiptap-markdown extension now handles tables directly, so no custom parsing needed
 
 // Utility function to create slug from text
@@ -163,6 +164,22 @@ function App() {
   const [sourceContent, setSourceContent] = useState('')
   const sourceDebounceRef = useRef(null)
   const updateSourceRef = useRef(false) // Flag to prevent infinite loops
+
+  // Width toggle state with localStorage persistence
+  const [widthMode, setWidthMode] = useState(() => {
+    const saved = localStorage.getItem('documentViewerWidthMode')
+    return saved || 'document' // 'document' or 'full'
+  })
+
+  // Save width mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('documentViewerWidthMode', widthMode)
+  }, [widthMode])
+
+  // Toggle width mode function
+  const toggleWidthMode = () => {
+    setWidthMode(current => current === 'document' ? 'full' : 'document')
+  }
 
   const editor = useEditor({
     editable: true,
@@ -590,13 +607,24 @@ function App() {
         >
           Link
         </button>
+        <div className="toolbar-separator"></div>
+        <button
+          onClick={toggleWidthMode}
+          className={`toolbar-button width-toggle ${widthMode === 'full' ? 'active' : ''}`}
+          title={widthMode === 'document' ? 'Switch to full width' : 'Switch to document width'}
+        >
+          {widthMode === 'document' ? <Expand size={16} /> : <Shrink size={16} />}
+          <span className="toolbar-button-text">
+            {widthMode === 'document' ? 'Full Width' : 'Document'}
+          </span>
+        </button>
       </div>
       <main className="content">
         <div
           ref={previewRef}
           className={`preview ${showSource ? 'split' : ''}`}
         >
-          <div className={`editor-wrapper ${showSource ? 'compact' : ''}`}>
+          <div className={`editor-wrapper ${showSource ? 'compact' : ''} ${widthMode === 'full' ? 'full-width' : ''}`}>
             {editor && (
               <EditorContent
                 editor={editor}
