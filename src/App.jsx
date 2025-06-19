@@ -6,6 +6,138 @@ import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown'
 import DiffMatchPatch from 'diff-match-patch'
+import { Node, mergeAttributes } from '@tiptap/core'
+
+// Utility function to create slug from text
+const createSlug = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except hyphens and spaces
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+}
+
+// Utility function to ensure unique slug
+const ensureUniqueSlug = (baseSlug, existingIds = new Set()) => {
+  let slug = baseSlug
+  let counter = 1
+  
+  while (existingIds.has(slug)) {
+    slug = `${baseSlug}-${counter}`
+    counter++
+  }
+  
+  return slug
+}
+
+// Custom Heading extension that adds IDs automatically
+const HeadingWithId = Node.create({
+  name: 'heading',
+  priority: 1000,
+  
+  addOptions() {
+    return {
+      levels: [1, 2, 3, 4, 5, 6],
+      HTMLAttributes: {},
+    }
+  },
+
+  content: 'inline*',
+
+  group: 'block',
+
+  defining: true,
+
+  addAttributes() {
+    return {
+      level: {
+        default: 1,
+        rendered: false,
+      },
+      id: {
+        default: null,
+        parseHTML: element => element.getAttribute('id'),
+        renderHTML: attributes => {
+          if (!attributes.id) {
+            return {}
+          }
+          return {
+            id: attributes.id,
+          }
+        },
+      },
+    }
+  },
+
+  parseHTML() {
+    return this.options.levels
+      .map((level) => ({
+        tag: `h${level}`,
+        attrs: { level },
+        getAttrs: (node) => {
+          const existingId = node.getAttribute('id')
+          const textContent = node.textContent || ''
+          const baseSlug = createSlug(textContent)
+          
+          return {
+            level,
+            id: existingId || (textContent ? baseSlug : null)
+          }
+        }
+      }))
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    const hasLevel = this.options.levels.includes(node.attrs.level)
+    const level = hasLevel ? node.attrs.level : this.options.levels[0]
+    
+    // Generate ID from content if not present
+    let id = node.attrs.id
+    if (!id && node.textContent) {
+      const existingIds = new Set()
+      // Get all existing heading IDs from the document
+      const doc = node.doc || node
+      if (doc && doc.descendants) {
+        doc.descendants((descendant) => {
+          if (descendant.type.name === 'heading' && descendant.attrs.id) {
+            existingIds.add(descendant.attrs.id)
+          }
+        })
+      }
+      
+      const baseSlug = createSlug(node.textContent)
+      id = ensureUniqueSlug(baseSlug, existingIds)
+      
+      // Update the node's attributes
+      node.attrs.id = id
+    }
+
+    const attributes = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+      id: id || undefined
+    })
+
+    return [`h${level}`, attributes, 0]
+  },
+
+  addCommands() {
+    return {
+      setHeading: (attributes) => ({ commands }) => {
+        return commands.setNode(this.name, attributes)
+      },
+      toggleHeading: (attributes) => ({ commands }) => {
+        return commands.toggleNode(this.name, 'paragraph', attributes)
+      },
+    }
+  },
+
+  addKeyboardShortcuts() {
+    return this.options.levels.reduce((items, level) => ({
+      ...items,
+      [`Mod-Alt-${level}`]: () => this.editor.commands.toggleHeading({ level }),
+    }), {})
+  },
+})
 
 function App() {
   const [handle, setHandle] = useState(null)
@@ -31,6 +163,8 @@ function App() {
     editable: true,
     extensions: [
       StarterKit.configure({
+        // Disable the default heading extension since we're using our custom one
+        heading: false,
         bulletList: {
           keepMarks: true,
           keepAttributes: false,
@@ -40,6 +174,8 @@ function App() {
           keepAttributes: false,
         },
       }),
+      // Add our custom heading extension
+      HeadingWithId,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -176,7 +312,7 @@ function App() {
     }
   }, [])
 
-  // Handle cmd/ctrl+click on links
+  // Handle link clicks - internal links scroll, external links open with cmd/ctrl+click
   useEffect(() => {
     if (!editor) return;
 
@@ -185,12 +321,29 @@ function App() {
       const link = event.target.closest('a.link');
       if (!link) return;
 
-      // Check if cmd (Mac) or ctrl (Windows/Linux) is held
-      if (event.metaKey || event.ctrlKey) {
+      const href = link.getAttribute('href');
+      if (!href) return;
+
+      // Check if it's an internal link (starts with #)
+      if (href.startsWith('#')) {
+        // Internal link - scroll to element
         event.preventDefault();
         event.stopPropagation();
-        const href = link.getAttribute('href');
-        if (href) {
+        
+        const targetId = href.substring(1); // Remove the # symbol
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      } else {
+        // External link - only open if cmd/ctrl is held
+        if (event.metaKey || event.ctrlKey) {
+          event.preventDefault();
+          event.stopPropagation();
           window.open(href, '_blank');
         }
       }

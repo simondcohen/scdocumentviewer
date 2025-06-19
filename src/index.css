@@ -213,7 +213,13 @@ body {
   color: rgb(51, 65, 85);
 }
 
-/* Heading sizes */
+/* Heading sizes and ID styling */
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  scroll-margin-top: 2rem; /* Add scroll margin for better targeting */
+}
+
 .ProseMirror h1 { font-size: 2.5em; font-weight: 700; line-height: 1.2; }
 .ProseMirror h2 { font-size: 2em; font-weight: 700; line-height: 1.3; }
 .ProseMirror h3 { font-size: 1.5em; font-weight: 600; line-height: 1.4; }
@@ -221,13 +227,18 @@ body {
 .ProseMirror h5 { font-size: 1.1em; font-weight: 600; }
 .ProseMirror h6 { font-size: 1em; font-weight: 600; }
 
-.ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-}
-
 .ProseMirror h1:first-child, .ProseMirror h2:first-child, .ProseMirror h3:first-child {
   margin-top: 0;
+}
+
+.ProseMirror h1:target, .ProseMirror h2:target, .ProseMirror h3:target, 
+.ProseMirror h4:target, .ProseMirror h5:target, .ProseMirror h6:target {
+  background-color: rgba(255, 255, 0, 0.1);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
 .ProseMirror p {
