@@ -11,44 +11,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import { Markdown } from 'tiptap-markdown'
 import DiffMatchPatch from 'diff-match-patch'
 import { Node, mergeAttributes } from '@tiptap/core'
-import markdownit from 'markdown-it'
-
-// Create markdown parser with table support
-const md = markdownit({
-  html: false,
-  breaks: true,
-}).enable('table')
-
-// Custom function to parse markdown tables and convert to TipTap nodes
-const parseMarkdownWithTables = (markdown) => {
-  // First, let's extract and convert tables to temporary HTML
-  let processedMarkdown = markdown
-  const tableRegex = /(\|[^\n]+\|\r?\n)((?:\|:?-+:?)+\|)(\r?\n(?:\|[^\n]+\|\r?\n?)*)/g
-  
-  const tables = []
-  processedMarkdown = processedMarkdown.replace(tableRegex, (match) => {
-    const html = md.render(match)
-    const placeholder = `<!--TABLE_PLACEHOLDER_${tables.length}-->`
-    tables.push(html)
-    return placeholder
-  })
-  
-  return { processedMarkdown, tables }
-}
-
-// Custom function to restore tables after TipTap processes the markdown
-const restoreTables = (editor, tables) => {
-  const content = editor.getHTML()
-  let restoredContent = content
-  
-  tables.forEach((tableHtml, index) => {
-    const placeholder = `<!--TABLE_PLACEHOLDER_${index}-->`
-    restoredContent = restoredContent.replace(placeholder, tableHtml)
-  })
-  
-  // Set content with HTML to properly parse tables
-  editor.commands.setContent(restoredContent)
-}
+// The tiptap-markdown extension now handles tables directly, so no custom parsing needed
 
 // Utility function to create slug from text
 const createSlug = (text) => {
@@ -271,17 +234,8 @@ function App() {
       if (editor && newContent !== content) {
         updateSourceRef.current = true // Prevent feedback loop
         
-        // Parse tables before setting content
-        const { processedMarkdown, tables } = parseMarkdownWithTables(newContent)
-        editor.commands.setContent(processedMarkdown)
-        
-        // Restore tables
-        if (tables.length > 0) {
-          setTimeout(() => {
-            restoreTables(editor, tables)
-          }, 50)
-        }
-        
+        // The Markdown extension now handles tables directly
+        editor.commands.setContent(newContent)
         setContent(newContent)
       }
     }, 400) // 400ms debounce for typing
@@ -324,16 +278,8 @@ function App() {
               const patch = dmpRef.current.patch_make(lastSavedContent, text)
               const [merged] = dmpRef.current.patch_apply(patch, currentText)
               
-              // Parse tables before setting merged content
-              const { processedMarkdown: processedMerged, tables: mergedTables } = parseMarkdownWithTables(merged)
-              editor?.commands.setContent(processedMerged)
-              
-              // Restore tables for merged content
-              if (mergedTables.length > 0) {
-                setTimeout(() => {
-                  restoreTables(editor, mergedTables)
-                }, 50)
-              }
+              // The Markdown extension now handles tables directly
+              editor?.commands.setContent(merged)
               
               setContent(merged)
               setSourceContent(merged)
@@ -343,16 +289,8 @@ function App() {
               // Show reload indicator when no merge is needed
               setReloadingVisible(true)
               
-              // Parse tables before setting text content
-              const { processedMarkdown, tables } = parseMarkdownWithTables(text)
-              editor?.commands.setContent(processedMarkdown)
-              
-              // Restore tables
-              if (tables.length > 0) {
-                setTimeout(() => {
-                  restoreTables(editor, tables)
-                }, 50)
-              }
+              // The Markdown extension now handles tables directly
+              editor?.commands.setContent(text)
               
               setContent(text)
               setSourceContent(text)
@@ -494,22 +432,12 @@ function App() {
         setFileName(file.name)
         setLastModified(file.lastModified)
 
-        // Parse markdown with custom table handling
-        const { processedMarkdown, tables } = parseMarkdownWithTables(text)
-
         setContent(text)
         setSourceContent(text)
         setLastSavedContent(text)
 
-        // First set the markdown without tables
-        editor?.commands.setContent(processedMarkdown)
-
-        // Then restore tables if any exist
-        if (tables.length > 0 && editor) {
-          setTimeout(() => {
-            restoreTables(editor, tables)
-          }, 100)
-        }
+        // The Markdown extension now handles tables directly
+        editor?.commands.setContent(text)
       } catch (err) {
         console.error('Error opening file:', err)
         alert(
