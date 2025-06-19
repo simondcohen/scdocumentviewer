@@ -313,10 +313,9 @@ body {
   border-collapse: collapse;
   margin: 1rem 0;
   width: 100%;
-  /* Add table layout and overflow */
   table-layout: fixed;
-  overflow-x: auto;
-  display: block;
+  overflow: visible;
+  display: table;
   max-width: 100%;
 }
 
@@ -324,11 +323,43 @@ body {
   border: 1px solid #e5e7eb;
   padding: 0.5rem;
   text-align: left;
+  vertical-align: top;
+  position: relative;
+  min-width: 1em;
 }
 
 .ProseMirror th {
   background: #f9fafb;
   font-weight: 600;
+}
+
+/* TipTap table selection styles */
+.ProseMirror .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(200, 200, 255, 0.4);
+  pointer-events: none;
+}
+
+/* Table resize handle styles */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: #adf;
+  pointer-events: none;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
 }
 
 /* Horizontal rules */

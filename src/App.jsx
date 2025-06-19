@@ -4,6 +4,10 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableHeader from '@tiptap/extension-table-header'
+import TableCell from '@tiptap/extension-table-cell'
 import { Markdown } from 'tiptap-markdown'
 import DiffMatchPatch from 'diff-match-patch'
 import { Node, mergeAttributes } from '@tiptap/core'
@@ -186,6 +190,13 @@ function App() {
       Placeholder.configure({ 
         placeholder: 'Start writing or paste markdown...' 
       }),
+      // Table extensions
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Markdown.configure({
         html: false,
         tightLists: true,
