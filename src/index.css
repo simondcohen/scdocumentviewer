@@ -8,6 +8,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Header dimensions */
+  --header-height: 3.5rem; /* 56px */
+  --toolbar-height: 2.25rem; /* 36px */
+  --sticky-header-height: calc(var(--header-height) + var(--toolbar-height)); /* 92px total */
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -29,11 +38,62 @@ body {
 
 .app-header {
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-height);
+  box-sizing: border-box;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.outline-toggle-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.outline-toggle-header:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+.outline-toggle-header.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+
+.outline-toggle-header svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.outline-toggle-header.active svg {
+  transform: rotate(180deg);
+}
+
+.btn-text {
+  font-size: 0.875rem;
 }
 
 .file-info {
@@ -77,8 +137,10 @@ body {
   border-bottom: 1px solid #e5e7eb;
   padding: 0.25rem;
   position: sticky;
-  top: 0;
+  top: var(--header-height);
   z-index: 10;
+  height: var(--toolbar-height);
+  box-sizing: border-box;
 }
 
 .btn {
@@ -146,6 +208,7 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 
 .preview {
@@ -154,11 +217,22 @@ body {
   overflow: auto;
   justify-content: center;
   scroll-behavior: smooth;
+  position: relative;
 }
 
 .preview.split {
   width: 50%;
   border-right: 1px solid #e5e7eb;
+}
+
+.preview.with-outline {
+  margin-right: 280px;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preview:not(.with-outline) {
+  margin-right: 0;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .editor-wrapper {
@@ -191,6 +265,7 @@ body {
 .doc-editor .ProseMirror {
   min-height: calc(100vh - 8rem);
   max-width: 100%;
+  padding-top: 1rem;
 }
 
 .editor-source {
@@ -208,6 +283,8 @@ body {
   line-height: 1.5;
   color: #374151;
   tab-size: 2;
+  border-left: 1px solid #e5e7eb;
+  box-sizing: border-box;
 }
 
 .editor-source:focus {
@@ -245,7 +322,7 @@ body {
 .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
   margin-top: 2rem;
   margin-bottom: 1rem;
-  scroll-margin-top: 2rem; /* Add scroll margin for better targeting */
+  scroll-margin-top: var(--sticky-header-height); /* Use variable for consistent scroll targeting */
 }
 
 .ProseMirror h1 { font-size: 2.5em; font-weight: 700; line-height: 1.2; }
@@ -437,4 +514,288 @@ body {
 .btn:focus-visible, .toolbar-button:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Outline Sidebar Styles */
+.outline-sidebar {
+  position: fixed;
+  top: var(--sticky-header-height);
+  right: 0;
+  width: 280px;
+  height: calc(100vh - var(--sticky-header-height));
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  /* Transform is controlled via JavaScript */
+  will-change: transform;
+}
+
+.outline-sidebar.visible {
+  /* Visibility is now controlled via JavaScript transform */
+}
+
+.outline-header-bar {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9fafb; /* Slightly different background for visual hierarchy */
+  flex-shrink: 0;
+}
+
+.outline-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.outline-close {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.outline-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.outline-tree {
+  padding: 0 0.5rem;
+}
+
+.outline-item {
+  margin-bottom: 2px;
+}
+
+.outline-header {
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  position: relative;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.outline-header:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.outline-header:active {
+  background: #e5e7eb;
+}
+
+/* Add a subtle left border for active/current section */
+.outline-header.active {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.outline-header.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #3b82f6;
+  border-radius: 0 2px 2px 0;
+}
+
+.outline-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  margin-right: 0.25rem;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.outline-toggle:hover {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.outline-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.outline-spacer {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+}
+
+.outline-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.outline-children {
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+  position: relative;
+}
+
+/* Add subtle connecting lines */
+.outline-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #e5e7eb;
+}
+
+/* Different font sizes and weights for header levels */
+.outline-header-1 .outline-text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.outline-header-2 .outline-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.outline-header-3 .outline-text {
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.outline-header-4 .outline-text,
+.outline-header-5 .outline-text,
+.outline-header-6 .outline-text {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.outline-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Smooth preview adjustment */
+.preview.with-outline {
+  margin-right: 280px;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preview:not(.with-outline) {
+  margin-right: 0;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Better mobile handling */
+@media (max-width: 768px) {
+  .outline-sidebar {
+    width: 100%;
+    max-width: 320px;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: var(--sticky-header-height);
+    height: calc(100vh - var(--sticky-header-height));
+  }
+  
+  .outline-sidebar.visible {
+    /* Visibility is controlled via JavaScript */
+  }
+
+  .preview.with-outline {
+    margin-right: 0;
+  }
+
+  .outline-toggle-header .btn-text {
+    display: none;
+  }
+  
+  /* Add dark overlay for mobile */
+  .outline-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 14;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  
+  .outline-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.outline-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.5rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for outline */
+.outline-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.outline-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.outline-content::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.outline-content::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
 }

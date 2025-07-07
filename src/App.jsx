@@ -11,7 +11,8 @@ import TableCell from '@tiptap/extension-table-cell'
 import { Markdown } from 'tiptap-markdown'
 import DiffMatchPatch from 'diff-match-patch'
 import { Node, mergeAttributes } from '@tiptap/core'
-import { Expand, Shrink } from 'lucide-react'
+import { Expand, Shrink, List } from 'lucide-react'
+import OutlineSidebar from './components/OutlineSidebar'
 // The tiptap-markdown extension now handles tables directly, so no custom parsing needed
 
 // Utility function to create slug from text
@@ -171,14 +172,30 @@ function App() {
     return saved || 'document' // 'document' or 'full'
   })
 
+  // Outline sidebar state with localStorage persistence
+  const [showOutline, setShowOutline] = useState(() => {
+    const saved = localStorage.getItem('documentViewerShowOutline')
+    return saved === 'true'
+  })
+
   // Save width mode preference to localStorage
   useEffect(() => {
     localStorage.setItem('documentViewerWidthMode', widthMode)
   }, [widthMode])
 
+  // Save outline visibility to localStorage
+  useEffect(() => {
+    localStorage.setItem('documentViewerShowOutline', showOutline.toString())
+  }, [showOutline])
+
   // Toggle width mode function
   const toggleWidthMode = () => {
     setWidthMode(current => current === 'document' ? 'full' : 'document')
+  }
+
+  // Toggle outline sidebar function
+  const toggleOutline = () => {
+    setShowOutline(current => !current)
   }
 
   const editor = useEditor({
@@ -521,9 +538,17 @@ function App() {
           {reloadingVisible && <span className="reload-notice">Reloading...</span>}
           {mergedVisible && <span className="merge-notice">Merged</span>}
         </div>
-        <div>
+        <div className="header-actions">
           <button onClick={() => setShowSource((v) => !v)} className="btn">
             {showSource ? 'Hide Source' : 'Show Source'}
+          </button>
+          <button
+            onClick={toggleOutline}
+            className={`btn outline-toggle-header ${showOutline ? 'active' : ''}`}
+            title={showOutline ? 'Hide outline' : 'Show outline'}
+          >
+            <List size={16} />
+            <span className="btn-text">Outline</span>
           </button>
         </div>
       </header>
@@ -620,9 +645,14 @@ function App() {
         </button>
       </div>
       <main className="content">
+        <OutlineSidebar
+          content={content}
+          isVisible={showOutline}
+          onToggle={toggleOutline}
+        />
         <div
           ref={previewRef}
-          className={`preview ${showSource ? 'split' : ''}`}
+          className={`preview ${showSource ? 'split' : ''} ${showOutline ? 'with-outline' : ''}`}
         >
           <div className={`editor-wrapper ${showSource ? 'compact' : ''} ${widthMode === 'full' ? 'full-width' : ''}`}>
             {editor && (
