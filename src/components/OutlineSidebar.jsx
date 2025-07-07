@@ -5,11 +5,35 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 const extractHeaders = (content) => {
   if (!content) return []
   
+  // First, find all code block ranges
+  const codeBlockRanges = []
+  const codeBlockRegex = /```[\s\S]*?```/g
+  let codeMatch
+  
+  while ((codeMatch = codeBlockRegex.exec(content)) !== null) {
+    codeBlockRanges.push({
+      start: codeMatch.index,
+      end: codeMatch.index + codeMatch[0].length
+    })
+  }
+  
+  // Function to check if a position is inside a code block
+  const isInCodeBlock = (position) => {
+    return codeBlockRanges.some(range => 
+      position >= range.start && position <= range.end
+    )
+  }
+  
   const headerRegex = /^#{1,6}\s+(.+)$/gm
   const headers = []
   let match
   
   while ((match = headerRegex.exec(content)) !== null) {
+    // Skip headers that are inside code blocks
+    if (isInCodeBlock(match.index)) {
+      continue
+    }
+    
     const level = match[0].indexOf(' ')
     const text = match[1].trim()
     const id = createSlug(text)

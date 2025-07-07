@@ -184,6 +184,17 @@ function App() {
     return saved ? parseInt(saved) : 280
   })
 
+  // Word count states
+  const [wordCount, setWordCount] = useState(0)
+  const [selectionWordCount, setSelectionWordCount] = useState(0)
+
+  // Word counting function
+  const countWords = (text) => {
+    // Remove extra whitespace and split by whitespace
+    const words = text.trim().split(/\s+/)
+    return text.trim() === '' ? 0 : words.length
+  }
+
   // Save width mode preference to localStorage
   useEffect(() => {
     localStorage.setItem('documentViewerWidthMode', widthMode)
@@ -251,11 +262,24 @@ function App() {
       const markdown = editor.storage.markdown.getMarkdown()
       setContent(markdown)
       
+      // Count total words
+      const text = editor.state.doc.textContent
+      setWordCount(countWords(text))
+      
       // Only update source content if the change didn't come from source view
       if (!updateSourceRef.current && !isEditingSource) {
         setSourceContent(markdown)
       }
       updateSourceRef.current = false
+    },
+    onSelectionUpdate({ editor }) {
+      const { from, to } = editor.state.selection
+      if (from !== to) {
+        const selectedText = editor.state.doc.textBetween(from, to, ' ')
+        setSelectionWordCount(countWords(selectedText))
+      } else {
+        setSelectionWordCount(0)
+      }
     },
   })
 
@@ -540,7 +564,18 @@ function App() {
             <button onClick={openFile} className="btn btn-primary">
               Open File
             </button>
-            {fileName && <span className="file-name">{fileName}</span>}
+            {fileName && (
+              <div className="file-path-container">
+                <span className="file-path" title={handle?.name || fileName}>
+                  {fileName}
+                </span>
+                <span className="word-count">
+                  {selectionWordCount > 0 
+                    ? `${selectionWordCount} of ${wordCount} words`
+                    : `${wordCount} words`}
+                </span>
+              </div>
+            )}
             {savedVisible && <span className="saved-notice">Saved</span>}
             {reloadingVisible && <span className="reload-notice">Reloading...</span>}
             {mergedVisible && <span className="merge-notice">Merged</span>}
