@@ -13,6 +13,9 @@ import DiffMatchPatch from 'diff-match-patch'
 import { Node, mergeAttributes } from '@tiptap/core'
 import { Expand, Shrink, List } from 'lucide-react'
 import OutlineSidebar from './components/OutlineSidebar'
+import WelcomeScreen from './components/WelcomeScreen'
+import FileMenu from './components/FileMenu'
+import { addRecentFile } from './utils/recentFiles'
 // The tiptap-markdown extension now handles tables directly, so no custom parsing needed
 
 // Utility function to create slug from text
@@ -160,6 +163,11 @@ function App() {
   const [lastSavedContent, setLastSavedContent] = useState('')
   const dmpRef = useRef(new DiffMatchPatch())
   
+  // File management state
+  const [showWelcome, setShowWelcome] = useState(true)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [originalContent, setOriginalContent] = useState('')
+  
   // New state for editable source view
   const [isEditingSource, setIsEditingSource] = useState(false)
   const [sourceContent, setSourceContent] = useState('')
@@ -261,6 +269,9 @@ function App() {
     onUpdate({ editor }) {
       const markdown = editor.storage.markdown.getMarkdown()
       setContent(markdown)
+      
+      // Track unsaved changes
+      setHasUnsavedChanges(markdown !== originalContent)
       
       // Count total words
       const text = editor.state.doc.textContent
@@ -470,6 +481,117 @@ function App() {
     }
   }
 
+  // File management functions
+  const handleNewFile = () => {
+    if (hasUnsavedChanges) {
+      const shouldDiscard = window.confirm(
+        'You have unsaved changes. Are you sure you want to create a new document? Your changes will be lost.'
+      )
+      if (!shouldDiscard) return
+    }
+
+    setHandle(null)
+    setFileName('Untitled.md')
+    setContent('')
+    setSourceContent('')
+    setLastSavedContent('')
+    setOriginalContent('')
+    setHasUnsavedChanges(false)
+    setShowWelcome(false)
+    
+    editor?.commands.setContent('')
+  }
+
+  const handleSaveAs = async () => {
+    if (!editor) return
+
+    try {
+      const newHandle = await window.showSaveFilePicker({
+        types: [
+          {
+            description: 'Markdown Files',
+            accept: { 'text/markdown': ['.md'] },
+          },
+        ],
+        suggestedName: fileName || 'document.md',
+      })
+
+      const writable = await newHandle.createWritable()
+      const markdown = editor.storage.markdown.getMarkdown()
+      await writable.write(markdown)
+      await writable.close()
+
+      // Update state with new file handle
+      const file = await newHandle.getFile()
+      setHandle(newHandle)
+      setFileName(file.name)
+      setLastModified(file.lastModified)
+      setLastSavedContent(markdown)
+      setOriginalContent(markdown)
+      setHasUnsavedChanges(false)
+
+      // Add to recent files
+      try {
+        await addRecentFile(newHandle)
+      } catch (error) {
+        console.error('Error adding to recent files:', error)
+      }
+
+      setSavedVisible(true)
+      setTimeout(() => setSavedVisible(false), 1000)
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Error saving file:', err)
+        alert('Failed to save file. Please try again.')
+      }
+    }
+  }
+
+  const handleSave = async () => {
+    if (!editor || !handle) return handleSaveAs()
+
+    try {
+      const writable = await handle.createWritable()
+      const markdown = editor.storage.markdown.getMarkdown()
+      await writable.write(markdown)
+      await writable.close()
+
+      const file = await handle.getFile()
+      setLastModified(file.lastModified)
+      setLastSavedContent(markdown)
+      setOriginalContent(markdown)
+      setHasUnsavedChanges(false)
+
+      setSavedVisible(true)
+      setTimeout(() => setSavedVisible(false), 1000)
+    } catch (err) {
+      console.error('Error saving file:', err)
+      alert('Failed to save file. Please try again.')
+    }
+  }
+
+  const handleCloseFile = () => {
+    if (hasUnsavedChanges) {
+      const result = window.confirm(
+        'You have unsaved changes. Are you sure you want to close this document? Your changes will be lost.'
+      )
+      if (!result) return
+    }
+
+    setHandle(null)
+    setFileName('')
+    setContent('')
+    setSourceContent('')
+    setLastSavedContent('')
+    setOriginalContent('')
+    setHasUnsavedChanges(false)
+    setShowWelcome(true)
+    
+    editor?.commands.setContent('')
+  }
+
+
+
   const openWithHandle = useCallback(
     async (h) => {
       if (!h) return
@@ -499,6 +621,16 @@ function App() {
         setContent(text)
         setSourceContent(text)
         setLastSavedContent(text)
+        setOriginalContent(text)
+        setHasUnsavedChanges(false)
+        setShowWelcome(false)
+
+        // Add to recent files
+        try {
+          await addRecentFile(h)
+        } catch (error) {
+          console.error('Error adding to recent files:', error)
+        }
 
         // The Markdown extension now handles tables directly
         editor?.commands.setContent(text)
@@ -533,6 +665,41 @@ function App() {
     }
   }, [openWithHandle]);
 
+  // Keyboard shortcuts for file operations
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key) {
+          case 'n':
+            e.preventDefault()
+            handleNewFile()
+            break
+          case 'o':
+            e.preventDefault()
+            openFile()
+            break
+          case 's':
+            e.preventDefault()
+            if (e.shiftKey) {
+              handleSaveAs()
+            } else {
+              handleSave()
+            }
+            break
+          case 'w':
+            e.preventDefault()
+            handleCloseFile()
+            break
+          default:
+            break
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [hasUnsavedChanges, handle, editor])
+
   useEffect(() => {
     if (!editor || !handle) return
     
@@ -561,39 +728,53 @@ function App() {
       <header className="site-header">
         <div className="app-header">
           <div className="file-info">
-            <button onClick={openFile} className="btn btn-primary">
-              Open File
-            </button>
-            {fileName && (
-              <div className="file-path-container">
-                <span className="file-path" title={handle?.name || fileName}>
-                  {fileName}
-                </span>
-                <span className="word-count">
-                  {selectionWordCount > 0 
-                    ? `${selectionWordCount} of ${wordCount} words`
-                    : `${wordCount} words`}
-                </span>
-              </div>
+            <FileMenu
+              onNew={handleNewFile}
+              onOpen={openFile}
+              onSave={handleSave}
+              onSaveAs={handleSaveAs}
+              onClose={handleCloseFile}
+              hasOpenFile={!!handle}
+              isModified={hasUnsavedChanges}
+            />
+            {!showWelcome && (
+              <>
+                {fileName && (
+                  <div className="file-path-container">
+                    <span className="file-path" title={handle?.name || fileName}>
+                      {fileName}
+                      {hasUnsavedChanges && <span className="unsaved-indicator">*</span>}
+                    </span>
+                    <span className="word-count">
+                      {selectionWordCount > 0 
+                        ? `${selectionWordCount} of ${wordCount} words`
+                        : `${wordCount} words`}
+                    </span>
+                  </div>
+                )}
+                {savedVisible && <span className="saved-notice">Saved</span>}
+                {reloadingVisible && <span className="reload-notice">Reloading...</span>}
+                {mergedVisible && <span className="merge-notice">Merged</span>}
+              </>
             )}
-            {savedVisible && <span className="saved-notice">Saved</span>}
-            {reloadingVisible && <span className="reload-notice">Reloading...</span>}
-            {mergedVisible && <span className="merge-notice">Merged</span>}
           </div>
-          <div className="header-actions">
-            <button onClick={() => setShowSource((v) => !v)} className="btn">
-              {showSource ? 'Rendered View' : 'Source View'}
-            </button>
-            <button
-              onClick={toggleOutline}
-              className={`btn outline-toggle-header ${showOutline ? 'active' : ''}`}
-              title={showOutline ? 'Hide outline' : 'Show outline'}
-            >
-              <List size={16} />
-              <span className="btn-text">Outline</span>
-            </button>
-          </div>
+          {!showWelcome && (
+            <div className="header-actions">
+              <button onClick={() => setShowSource((v) => !v)} className="btn">
+                {showSource ? 'Rendered View' : 'Source View'}
+              </button>
+              <button
+                onClick={toggleOutline}
+                className={`btn outline-toggle-header ${showOutline ? 'active' : ''}`}
+                title={showOutline ? 'Hide outline' : 'Show outline'}
+              >
+                <List size={16} />
+                <span className="btn-text">Outline</span>
+              </button>
+            </div>
+          )}
         </div>
+        {!showWelcome && (
         <nav className="toolbar">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -686,6 +867,7 @@ function App() {
           </span>
         </button>
         </nav>
+        )}
       </header>
       <OutlineSidebar
         content={content}
@@ -694,35 +876,42 @@ function App() {
         onWidthChange={setOutlineWidth}
       />
       <main className="content">
-        <div
-          ref={previewRef}
-          className={`preview ${showOutline ? 'with-outline' : ''}`}
-          style={showOutline ? { marginRight: `${outlineWidth}px` } : undefined}
-        >
-          {!showSource && (
-            <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
-              {editor && (
-                <EditorContent
-                  editor={editor}
-                  className="doc-editor prose"
+        {showWelcome ? (
+          <WelcomeScreen
+            onNewFile={handleNewFile}
+            onOpenFile={openFile}
+          />
+        ) : (
+          <div
+            ref={previewRef}
+            className={`preview ${showOutline ? 'with-outline' : ''}`}
+            style={showOutline ? { marginRight: `${outlineWidth}px` } : undefined}
+          >
+            {!showSource && (
+              <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
+                {editor && (
+                  <EditorContent
+                    editor={editor}
+                    className="doc-editor prose"
+                  />
+                )}
+              </div>
+            )}
+            {showSource && (
+              <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
+                <textarea
+                  className="editor-source-fullscreen"
+                  value={sourceContent}
+                  onChange={handleSourceChange}
+                  onFocus={handleSourceFocus}
+                  onBlur={handleSourceBlur}
+                  placeholder="Enter markdown here..."
+                  spellCheck={false}
                 />
-              )}
-            </div>
-          )}
-          {showSource && (
-            <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
-              <textarea
-                className="editor-source-fullscreen"
-                value={sourceContent}
-                onChange={handleSourceChange}
-                onFocus={handleSourceFocus}
-                onBlur={handleSourceBlur}
-                placeholder="Enter markdown here..."
-                spellCheck={false}
-              />
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
