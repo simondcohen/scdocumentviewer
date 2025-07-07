@@ -547,7 +547,7 @@ function App() {
           </div>
           <div className="header-actions">
             <button onClick={() => setShowSource((v) => !v)} className="btn">
-              {showSource ? 'Hide Source' : 'Show Source'}
+              {showSource ? 'Rendered View' : 'Source View'}
             </button>
             <button
               onClick={toggleOutline}
@@ -661,29 +661,33 @@ function App() {
       <main className="content">
         <div
           ref={previewRef}
-          className={`preview ${showSource ? 'split' : ''} ${showOutline ? 'with-outline' : ''}`}
+          className={`preview ${showOutline ? 'with-outline' : ''}`}
           style={showOutline ? { marginRight: `${outlineWidth}px` } : undefined}
         >
-          <div className={`editor-wrapper ${showSource ? 'compact' : ''} ${widthMode === 'full' ? 'full-width' : ''}`}>
-            {editor && (
-              <EditorContent
-                editor={editor}
-                className="doc-editor prose"
+          {!showSource && (
+            <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
+              {editor && (
+                <EditorContent
+                  editor={editor}
+                  className="doc-editor prose"
+                />
+              )}
+            </div>
+          )}
+          {showSource && (
+            <div className={`editor-wrapper ${widthMode === 'full' ? 'full-width' : ''}`}>
+              <textarea
+                className="editor-source-fullscreen"
+                value={sourceContent}
+                onChange={handleSourceChange}
+                onFocus={handleSourceFocus}
+                onBlur={handleSourceBlur}
+                placeholder="Enter markdown here..."
+                spellCheck={false}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
-        {showSource && (
-          <textarea
-            className="editor-source"
-            value={sourceContent}
-            onChange={handleSourceChange}
-            onFocus={handleSourceFocus}
-            onBlur={handleSourceBlur}
-            placeholder="Enter markdown here..."
-            spellCheck={false}
-          />
-        )}
       </main>
     </div>
   )
