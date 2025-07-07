@@ -36,15 +36,28 @@ body {
   min-height: 100vh;
 }
 
+/* ============================================
+   HEADER STRUCTURE - Fixed wrapper solution
+   ============================================ */
+
+/* Fixed wrapper that contains both header elements */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Subtle shadow for depth */
+}
+
+/* App header - now static inside the wrapper */
 .app-header {
   background: #ffffff;
   padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 20;
   height: var(--header-height);
   box-sizing: border-box;
 }
@@ -129,6 +142,7 @@ body {
   50% { opacity: 0; }
 }
 
+/* Toolbar - now static inside the wrapper */
 .toolbar {
   display: flex;
   gap: 0.25rem;
@@ -136,9 +150,6 @@ body {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   padding: 0.25rem;
-  position: sticky;
-  top: var(--header-height);
-  z-index: 10;
   height: var(--toolbar-height);
   box-sizing: border-box;
 }
@@ -204,11 +215,17 @@ body {
   font-size: 0.75rem;
 }
 
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+
+/* Push content below the fixed header */
 .content {
   flex: 1;
   display: flex;
   overflow: hidden;
   position: relative;
+  margin-top: var(--sticky-header-height); /* Push below fixed header */
 }
 
 .preview {
@@ -318,11 +335,15 @@ body {
   color: rgb(51, 65, 85);
 }
 
-/* Heading sizes and ID styling */
+/* ============================================
+   SCROLL BEHAVIOR FIXES
+   ============================================ */
+
+/* Ensure headings scroll to the correct position */
 .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
   margin-top: 2rem;
   margin-bottom: 1rem;
-  scroll-margin-top: var(--sticky-header-height); /* Use variable for consistent scroll targeting */
+  scroll-margin-top: var(--sticky-header-height);
 }
 
 .ProseMirror h1 { font-size: 2.5em; font-weight: 700; line-height: 1.2; }
@@ -516,7 +537,10 @@ body {
   outline-offset: 2px;
 }
 
-/* Outline Sidebar Styles */
+/* ============================================
+   OUTLINE SIDEBAR - Fixed positioning
+   ============================================ */
+
 .outline-sidebar {
   position: fixed;
   top: var(--sticky-header-height);
@@ -530,7 +554,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
-  /* Transform is controlled via JavaScript */
+  /* Transform is controlled via JavaScript for show/hide */
   will-change: transform;
 }
 
@@ -729,7 +753,7 @@ body {
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Better mobile handling */
+/* Mobile styles for outline */
 @media (max-width: 768px) {
   .outline-sidebar {
     width: 100%;
@@ -738,10 +762,6 @@ body {
     position: fixed;
     top: var(--sticky-header-height);
     height: calc(100vh - var(--sticky-header-height));
-  }
-  
-  .outline-sidebar.visible {
-    /* Visibility is controlled via JavaScript */
   }
 
   .preview.with-outline {

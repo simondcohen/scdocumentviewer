@@ -528,31 +528,32 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="file-info">
-          <button onClick={openFile} className="btn btn-primary">
-            Open File
-          </button>
-          {fileName && <span className="file-name">{fileName}</span>}
-          {savedVisible && <span className="saved-notice">Saved</span>}
-          {reloadingVisible && <span className="reload-notice">Reloading...</span>}
-          {mergedVisible && <span className="merge-notice">Merged</span>}
+      <header className="site-header">
+        <div className="app-header">
+          <div className="file-info">
+            <button onClick={openFile} className="btn btn-primary">
+              Open File
+            </button>
+            {fileName && <span className="file-name">{fileName}</span>}
+            {savedVisible && <span className="saved-notice">Saved</span>}
+            {reloadingVisible && <span className="reload-notice">Reloading...</span>}
+            {mergedVisible && <span className="merge-notice">Merged</span>}
+          </div>
+          <div className="header-actions">
+            <button onClick={() => setShowSource((v) => !v)} className="btn">
+              {showSource ? 'Hide Source' : 'Show Source'}
+            </button>
+            <button
+              onClick={toggleOutline}
+              className={`btn outline-toggle-header ${showOutline ? 'active' : ''}`}
+              title={showOutline ? 'Hide outline' : 'Show outline'}
+            >
+              <List size={16} />
+              <span className="btn-text">Outline</span>
+            </button>
+          </div>
         </div>
-        <div className="header-actions">
-          <button onClick={() => setShowSource((v) => !v)} className="btn">
-            {showSource ? 'Hide Source' : 'Show Source'}
-          </button>
-          <button
-            onClick={toggleOutline}
-            className={`btn outline-toggle-header ${showOutline ? 'active' : ''}`}
-            title={showOutline ? 'Hide outline' : 'Show outline'}
-          >
-            <List size={16} />
-            <span className="btn-text">Outline</span>
-          </button>
-        </div>
-      </header>
-      <div className="toolbar">
+        <nav className="toolbar">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`toolbar-button ${editor?.isActive('bold') ? 'active' : ''}`}
@@ -643,13 +644,14 @@ function App() {
             {widthMode === 'document' ? 'Full Width' : 'Document'}
           </span>
         </button>
-      </div>
+        </nav>
+      </header>
+      <OutlineSidebar
+        content={content}
+        isVisible={showOutline}
+        onToggle={toggleOutline}
+      />
       <main className="content">
-        <OutlineSidebar
-          content={content}
-          isVisible={showOutline}
-          onToggle={toggleOutline}
-        />
         <div
           ref={previewRef}
           className={`preview ${showSource ? 'split' : ''} ${showOutline ? 'with-outline' : ''}`}

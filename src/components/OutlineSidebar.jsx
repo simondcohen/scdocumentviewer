@@ -149,20 +149,18 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
   useEffect(() => {
     if (!isVisible || headerIds.length === 0) return
     
-    // Get the sticky header height from CSS
-    const rootStyles = getComputedStyle(document.documentElement)
-    const stickyHeaderHeight = parseInt(rootStyles.getPropertyValue('--sticky-header-height')) || 92
-    
     const handleScroll = () => {
       let currentActiveId = null
+      
+      // Use the CSS variable for consistent header height
+      const rootStyles = getComputedStyle(document.documentElement)
+      const stickyHeaderHeight = parseInt(rootStyles.getPropertyValue('--sticky-header-height')) || 92
       
       // Find the header that's currently in view
       for (const id of headerIds) {
         const element = document.getElementById(id)
         if (element) {
           const rect = element.getBoundingClientRect()
-          // Consider a header "active" if it's near the top of the viewport
-          // Account for sticky header height plus a small buffer
           if (rect.top <= stickyHeaderHeight + 20 && rect.top > -rect.height) {
             currentActiveId = id
             break
@@ -170,7 +168,7 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
         }
       }
       
-      // If no header is in the top portion, find the last one that's above the viewport
+      // If no header is in the top portion, find the last one above viewport
       if (!currentActiveId) {
         for (let i = headerIds.length - 1; i >= 0; i--) {
           const id = headerIds[i]
@@ -190,7 +188,6 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
       }
     }
     
-    // Check on mount and scroll
     handleScroll()
     window.addEventListener('scroll', handleScroll)
     
@@ -214,11 +211,10 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
   const navigateToSection = (id) => {
     const element = document.getElementById(id)
     if (element) {
-      // Get the exact sticky header height from CSS
+      // Use CSS variable for consistent offset
       const rootStyles = getComputedStyle(document.documentElement)
       const stickyHeaderHeight = parseInt(rootStyles.getPropertyValue('--sticky-header-height')) || 92
       
-      // Scroll with offset to account for sticky header
       const yOffset = -stickyHeaderHeight
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset
       
