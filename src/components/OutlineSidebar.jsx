@@ -131,11 +131,18 @@ const HeaderItem = ({ header, collapsedSections, onToggleSection, onNavigate, ac
 }
 
 // Main outline sidebar component
-const OutlineSidebar = ({ content, isVisible, onToggle }) => {
+const OutlineSidebar = ({ content, isVisible, onToggle, onWidthChange }) => {
   const [collapsedSections, setCollapsedSections] = useState(new Set())
   const [outline, setOutline] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [headerIds, setHeaderIds] = useState([])
+  
+  // State for resizing
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('documentViewerOutlineWidth')
+    return saved ? parseInt(saved) : 280
+  })
+  const [isResizing, setIsResizing] = useState(false)
   
   // Extract and build outline when content changes
   useEffect(() => {
@@ -251,6 +258,54 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
     }
   }, [isVisible, onToggle])
   
+  // Handle resize functionality
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault()
+    setIsResizing(true)
+    document.body.classList.add('resizing-outline')
+  }, [])
+  
+  useEffect(() => {
+    if (!isResizing) return
+    
+    const handleMouseMove = (e) => {
+      const newWidth = window.innerWidth - e.clientX
+      const minWidth = 200
+      const maxWidth = 600
+      
+      const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth))
+      setSidebarWidth(clampedWidth)
+      
+      // Update parent component
+      if (onWidthChange) {
+        onWidthChange(clampedWidth)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.body.classList.remove('resizing-outline')
+      // Save to localStorage
+      localStorage.setItem('documentViewerOutlineWidth', sidebarWidth.toString())
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.classList.remove('resizing-outline')
+    }
+  }, [isResizing, sidebarWidth, onWidthChange])
+  
+  // Update parent on mount and width changes
+  useEffect(() => {
+    if (onWidthChange && isVisible) {
+      onWidthChange(sidebarWidth)
+    }
+  }, [sidebarWidth, isVisible, onWidthChange])
+  
   return (
     <>
       {/* Mobile overlay */}
@@ -262,12 +317,21 @@ const OutlineSidebar = ({ content, isVisible, onToggle }) => {
       )}
       
       <div 
-        className={`outline-sidebar ${isVisible ? 'visible' : ''}`}
+        className={`outline-sidebar ${isVisible ? 'visible' : ''} ${isResizing ? 'resizing' : ''}`}
         style={{ 
           transform: `translateX(${isVisible ? 0 : '100%'})`,
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: isResizing ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          width: window.innerWidth > 768 ? `${sidebarWidth}px` : '100%'
         }}
       >
+        {/* Resize handle for desktop */}
+        {window.innerWidth > 768 && (
+          <div 
+            className="outline-resize-handle"
+            onMouseDown={handleMouseDown}
+          />
+        )}
+        
         <div className="outline-header-bar">
           <h3 className="outline-title">Outline</h3>
           <button 

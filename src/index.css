@@ -545,7 +545,7 @@ body {
   position: fixed;
   top: var(--sticky-header-height);
   right: 0;
-  width: 280px;
+  width: 280px; /* Default width, will be overridden by JS */
   height: calc(100vh - var(--sticky-header-height));
   background: #ffffff;
   border-left: 1px solid #e5e7eb;
@@ -560,6 +560,38 @@ body {
 
 .outline-sidebar.visible {
   /* Visibility is now controlled via JavaScript transform */
+}
+
+/* Resize handle for the outline sidebar */
+.outline-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 10;
+}
+
+.outline-resize-handle:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.outline-resize-handle:active,
+.outline-sidebar.resizing .outline-resize-handle {
+  background: rgba(59, 130, 246, 0.4);
+}
+
+/* Disable text selection while resizing */
+.outline-sidebar.resizing {
+  user-select: none;
+}
+
+body.resizing-outline {
+  user-select: none;
+  cursor: col-resize;
 }
 
 .outline-header-bar {
@@ -742,9 +774,9 @@ body {
   line-height: 1.5;
 }
 
-/* Smooth preview adjustment */
+/* Smooth preview adjustment - Updated to use dynamic width */
 .preview.with-outline {
-  margin-right: 280px;
+  /* Margin is now controlled via JavaScript style prop */
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

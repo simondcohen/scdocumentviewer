@@ -178,6 +178,12 @@ function App() {
     return saved === 'true'
   })
 
+  // Outline width state
+  const [outlineWidth, setOutlineWidth] = useState(() => {
+    const saved = localStorage.getItem('documentViewerOutlineWidth')
+    return saved ? parseInt(saved) : 280
+  })
+
   // Save width mode preference to localStorage
   useEffect(() => {
     localStorage.setItem('documentViewerWidthMode', widthMode)
@@ -650,11 +656,13 @@ function App() {
         content={content}
         isVisible={showOutline}
         onToggle={toggleOutline}
+        onWidthChange={setOutlineWidth}
       />
       <main className="content">
         <div
           ref={previewRef}
           className={`preview ${showSource ? 'split' : ''} ${showOutline ? 'with-outline' : ''}`}
+          style={showOutline ? { marginRight: `${outlineWidth}px` } : undefined}
         >
           <div className={`editor-wrapper ${showSource ? 'compact' : ''} ${widthMode === 'full' ? 'full-width' : ''}`}>
             {editor && (
