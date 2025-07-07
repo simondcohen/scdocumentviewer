@@ -167,10 +167,7 @@ function App() {
   const updateSourceRef = useRef(false) // Flag to prevent infinite loops
 
   // Width toggle state with localStorage persistence
-  const [widthMode, setWidthMode] = useState(() => {
-    const saved = localStorage.getItem('documentViewerWidthMode')
-    return saved || 'document' // 'document' or 'full'
-  })
+  const [widthMode, setWidthMode] = useState('document') // Default, will be updated when file opens
 
   // Outline sidebar state with localStorage persistence
   const [showOutline, setShowOutline] = useState(() => {
@@ -195,15 +192,70 @@ function App() {
     return text.trim() === '' ? 0 : words.length
   }
 
+  // Get width preference for a specific file
+  const getFileWidthPreference = (fileName) => {
+    if (!fileName) return localStorage.getItem('documentViewerDefaultWidth') || 'document'
+    
+    try {
+      const prefs = JSON.parse(localStorage.getItem('documentViewerFilePrefs') || '{}')
+      return prefs[fileName]?.widthMode || localStorage.getItem('documentViewerDefaultWidth') || 'document'
+    } catch (e) {
+      console.error('Error reading file preferences:', e)
+      return localStorage.getItem('documentViewerDefaultWidth') || 'document'
+    }
+  }
+
+  // Save width preference for current file
+  const saveFileWidthPreference = (fileName, mode) => {
+    if (!fileName) return
+    
+    try {
+      const prefs = JSON.parse(localStorage.getItem('documentViewerFilePrefs') || '{}')
+      prefs[fileName] = {
+        ...prefs[fileName],
+        widthMode: mode,
+        lastModified: new Date().toISOString()
+      }
+      // Keep only last 50 file preferences to prevent unlimited growth
+      const entries = Object.entries(prefs)
+      if (entries.length > 50) {
+        // Sort by lastModified and keep most recent 50
+        const sorted = entries.sort((a, b) => 
+          new Date(b[1].lastModified || 0) - new Date(a[1].lastModified || 0)
+        )
+        const kept = Object.fromEntries(sorted.slice(0, 50))
+        localStorage.setItem('documentViewerFilePrefs', JSON.stringify(kept))
+      } else {
+        localStorage.setItem('documentViewerFilePrefs', JSON.stringify(prefs))
+      }
+    } catch (e) {
+      console.error('Error saving file preferences:', e)
+    }
+  }
+
   // Save width mode preference to localStorage
   useEffect(() => {
-    localStorage.setItem('documentViewerWidthMode', widthMode)
-  }, [widthMode])
+    // Save preference when width changes (but only if we have a file open)
+    if (fileName) {
+      saveFileWidthPreference(fileName, widthMode)
+    }
+  }, [widthMode, fileName])
 
   // Save outline visibility to localStorage
   useEffect(() => {
     localStorage.setItem('documentViewerShowOutline', showOutline.toString())
   }, [showOutline])
+
+  // One-time migration of global preference for existing users
+  useEffect(() => {
+    const globalPref = localStorage.getItem('documentViewerWidthMode')
+    if (globalPref && !localStorage.getItem('documentViewerGlobalMigrated')) {
+      // Mark as migrated
+      localStorage.setItem('documentViewerGlobalMigrated', 'true')
+      // Keep global pref as fallback for new files
+      localStorage.setItem('documentViewerDefaultWidth', globalPref)
+    }
+  }, [])
 
   // Toggle width mode function
   const toggleWidthMode = () => {
@@ -495,6 +547,10 @@ function App() {
         const text = await file.text()
         setFileName(file.name)
         setLastModified(file.lastModified)
+
+        // Restore width preference for this file
+        const savedWidth = getFileWidthPreference(file.name)
+        setWidthMode(savedWidth)
 
         setContent(text)
         setSourceContent(text)
