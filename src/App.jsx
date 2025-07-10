@@ -15,6 +15,65 @@ import { Expand, Shrink, List } from 'lucide-react'
 import OutlineSidebar from './components/OutlineSidebar'
 // The tiptap-markdown extension now handles tables directly, so no custom parsing needed
 
+// Utility function to smartly unescape markdown that tiptap-markdown over-escapes
+const unescapeMarkdown = (markdown) => {
+  if (!markdown || typeof markdown !== 'string') return markdown || '';
+  
+  try {
+    // First, preserve actual double backslashes that should remain
+    // by temporarily replacing them with a placeholder
+    let processed = markdown.replace(/\\\\/g, '\u0000DOUBLEBACKSLASH\u0000');
+    
+    // Now unescape the unnecessarily escaped characters
+    processed = processed
+      // Unescape brackets (for wikilinks and regular links)
+      .replace(/\\\[/g, '[')
+      .replace(/\\\]/g, ']')
+      // Unescape parentheses
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')')
+      // Unescape asterisks (for emphasis)
+      .replace(/\\\*/g, '*')
+      // Unescape underscores
+      .replace(/\\_/g, '_')
+      // Unescape backticks
+      .replace(/\\`/g, '`')
+      // Unescape hash symbols (for headers)
+      .replace(/\\#/g, '#')
+      // Unescape pipes (for tables)
+      .replace(/\\\|/g, '|')
+      // Unescape tildes (for strikethrough)
+      .replace(/\\~/g, '~')
+      // Unescape angle brackets
+      .replace(/\\</g, '<')
+      .replace(/\\>/g, '>')
+      // Unescape curly braces (for templating syntaxes)
+      .replace(/\\\{/g, '{')
+      .replace(/\\\}/g, '}');
+    
+    // Restore the actual double backslashes
+    processed = processed.replace(/\u0000DOUBLEBACKSLASH\u0000/g, '\\\\');
+    
+    return processed;
+  } catch (error) {
+    console.error('Error unescaping markdown:', error);
+    // If something goes wrong, return the original to prevent data loss
+    return markdown;
+  }
+}
+
+// Add a helper to ensure consistent markdown processing
+const getCleanMarkdown = (editor) => {
+  if (!editor) return '';
+  try {
+    const markdown = editor.storage.markdown.getMarkdown();
+    return unescapeMarkdown(markdown);
+  } catch (error) {
+    console.error('Error getting clean markdown:', error);
+    return '';
+  }
+}
+
 // Utility function to create slug from text
 const createSlug = (text) => {
   return text
@@ -311,18 +370,23 @@ function App() {
     ],
     content: '',
     onUpdate({ editor }) {
-      const markdown = editor.storage.markdown.getMarkdown()
-      setContent(markdown)
-      
-      // Count total words
-      const text = editor.state.doc.textContent
-      setWordCount(countWords(text))
-      
-      // Only update source content if the change didn't come from source view
-      if (!updateSourceRef.current && !isEditingSource) {
-        setSourceContent(markdown)
+      try {
+        const markdown = editor.storage.markdown.getMarkdown();
+        setContent(markdown);
+        
+        // Count total words
+        const text = editor.state.doc.textContent;
+        setWordCount(countWords(text));
+        
+        // Only update source content if the change didn't come from source view
+        if (!updateSourceRef.current && !isEditingSource) {
+          // Apply unescaping for the source view as well
+          setSourceContent(unescapeMarkdown(markdown));
+        }
+        updateSourceRef.current = false;
+      } catch (error) {
+        console.error('Error in editor update:', error);
       }
-      updateSourceRef.current = false
     },
     onSelectionUpdate({ editor }) {
       const { from, to } = editor.state.selection
@@ -413,7 +477,7 @@ function App() {
             }
 
             setLastModified(file.lastModified)
-            setLastSavedContent(text)
+            setLastSavedContent(text) // Store the original file content
 
             // Restore cursor position
             requestAnimationFrame(() => {
@@ -554,7 +618,7 @@ function App() {
 
         setContent(text)
         setSourceContent(text)
-        setLastSavedContent(text)
+        setLastSavedContent(text) // Keep the original file content as-is for comparison
 
         // The Markdown extension now handles tables directly
         editor?.commands.setContent(text)
@@ -597,16 +661,29 @@ function App() {
     
     const id = setTimeout(async () => {
       try {
-        const writable = await handle.createWritable()
-        await writable.write(editor.storage.markdown.getMarkdown())
-        await writable.close()
-        const file = await handle.getFile()
-        setLastModified(file.lastModified)
-        setLastSavedContent(editor.storage.markdown.getMarkdown())
-        setSavedVisible(true)
-        setTimeout(() => setSavedVisible(false), 1000)
+        // Get the clean markdown content
+        const markdownContent = getCleanMarkdown(editor);
+        
+        // Only proceed if we have content
+        if (markdownContent === '' && content !== '') {
+          console.error('Failed to get markdown content for save');
+          return;
+        }
+        
+        const writable = await handle.createWritable();
+        await writable.write(markdownContent);
+        await writable.close();
+        
+        // Verify the save by reading back
+        const file = await handle.getFile();
+        setLastModified(file.lastModified);
+        setLastSavedContent(markdownContent);
+        setSavedVisible(true);
+        setTimeout(() => setSavedVisible(false), 1000);
       } catch (err) {
-        console.error(err)
+        console.error('Save error:', err);
+        // You might want to show an error notification here
+        // but for now we'll just log it to avoid disrupting the user
       }
     }, 2000)
     return () => clearTimeout(id)
