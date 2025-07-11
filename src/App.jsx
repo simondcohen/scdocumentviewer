@@ -561,6 +561,76 @@ function App() {
     };
   }, [editor]);
 
+  // Handle clean copy for Google Docs compatibility
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleCopy = (event) => {
+      // Check if we're copying from the rendered editor view
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      
+      // Only process if copying from the editor content
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      const element = container.nodeType === Node.TEXT_NODE 
+        ? container.parentElement 
+        : container;
+      
+      // Check if the selection is within the editor
+      const editorElement = element.closest('.doc-editor');
+      if (!editorElement) return;
+      
+      // Create a temporary container and clone the selection
+      const tempDiv = document.createElement('div');
+      tempDiv.appendChild(range.cloneContents());
+      
+      // Clean the HTML - remove all style and class attributes
+      const cleanHtml = tempDiv.innerHTML
+        // Remove all style attributes
+        .replace(/\sstyle="[^"]*"/gi, '')
+        // Remove all class attributes
+        .replace(/\sclass="[^"]*"/gi, '')
+        // Remove data attributes
+        .replace(/\sdata-[a-z-]+="[^"]*"/gi, '')
+        // Clean up font tags (legacy)
+        .replace(/<font[^>]*>/gi, '')
+        .replace(/<\/font>/gi, '')
+        // Ensure clean header tags
+        .replace(/<(h[1-6])([^>]*)>/gi, (match, tag, attrs) => {
+          // Preserve id attribute for headers (for anchor links)
+          const idMatch = attrs.match(/id="([^"]*)"/);
+          return idMatch ? `<${tag} id="${idMatch[1]}">` : `<${tag}>`;
+        })
+        // Clean paragraph tags
+        .replace(/<p([^>]*)>/gi, '<p>')
+        // Remove unnecessary spans
+        .replace(/<span[^>]*>([^<]*)<\/span>/gi, '$1')
+        // Clean up divs that wrap content unnecessarily
+        .replace(/<div[^>]*>([^<]*)<\/div>/gi, '<p>$1</p>')
+        // Clean up any double spaces in tags
+        .replace(/\s+>/g, '>')
+        // Remove empty paragraphs
+        .replace(/<p>\s*<\/p>/gi, '');
+      
+      // Get plain text as fallback
+      const plainText = selection.toString();
+      
+      // Override the clipboard with clean HTML and plain text
+      event.clipboardData.setData('text/html', cleanHtml);
+      event.clipboardData.setData('text/plain', plainText);
+      event.preventDefault();
+    };
+
+    // Add event listener to the document
+    document.addEventListener('copy', handleCopy);
+    
+    // Cleanup on unmount
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+    };
+  }, [editor]);
+
   const openFile = async () => {
     try {
       const [h] = await window.showOpenFilePicker({
